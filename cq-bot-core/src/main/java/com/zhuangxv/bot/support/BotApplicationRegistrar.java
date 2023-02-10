@@ -4,10 +4,8 @@ import com.zhuangxv.bot.core.component.BotDispatcher;
 import com.zhuangxv.bot.core.component.BotFactory;
 import com.zhuangxv.bot.core.component.BotInit;
 import com.zhuangxv.bot.core.component.SnowFlakeIdGenerator;
-import com.zhuangxv.bot.handler.message.GroupMessageEventHandler;
-import com.zhuangxv.bot.handler.message.GroupRecallEventHandler;
-import com.zhuangxv.bot.handler.message.MemberAddEventHandler;
-import com.zhuangxv.bot.handler.message.PrivateMessageEventHandler;
+import com.zhuangxv.bot.handler.message.*;
+import com.zhuangxv.bot.handler.meta.GroupRequestEventHandler;
 import com.zhuangxv.bot.handler.meta.HeartbeatEventHandler;
 import com.zhuangxv.bot.injector.support.*;
 import com.zhuangxv.bot.injector.support.friend.FriendInjector;
@@ -35,6 +33,7 @@ public class BotApplicationRegistrar implements ImportSelector {
                 PrivateMessageEventHandler.class.getName(),
                 GroupMessageEventHandler.class.getName(),
                 GroupRecallEventHandler.class.getName(),
+                GroupRequestEventHandler.class.getName(),
                 MemberAddEventHandler.class.getName(),
                 RecallMessageInjector.class.getName(),
                 BotInit.class.getName(),

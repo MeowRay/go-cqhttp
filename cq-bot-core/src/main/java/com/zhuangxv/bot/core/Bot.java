@@ -2,12 +2,12 @@ package com.zhuangxv.bot.core;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zhuangxv.bot.api.ApiResult;
 import com.zhuangxv.bot.api.support.*;
 import com.zhuangxv.bot.config.BotConfig;
-import com.zhuangxv.bot.core.component.BotDispatcher;
 import com.zhuangxv.bot.core.network.BotClient;
-import com.zhuangxv.bot.core.network.ws.WsBotClient;
 import com.zhuangxv.bot.exception.BotException;
 import com.zhuangxv.bot.message.CacheMessage;
 import com.zhuangxv.bot.message.MessageChain;
@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -28,7 +29,8 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class Bot {
 
-    private final Map<Long, Friend> friends = new ConcurrentHashMap<>();
+    private final Cache<Long, Friend> friends = Caffeine.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
+    private final Cache<Long, Stranger> stranger = Caffeine.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
     private final Map<Long, Group> groups = new ConcurrentHashMap<>();
     private final Map<Long, Map<Long, Member>> groupMembers = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, CacheMessage>> cacheMessageChain = new HashMap<>();
@@ -147,7 +149,7 @@ public class Bot {
             String remark = resultObject.getString("remark");
             this.friends.put(userId, new Friend(userId, nickname, remark, this));
         }
-        log.debug(String.format("[%s]刷新好友列表完成,共有好友%d个.", this.botName, this.friends.size()));
+        log.debug(String.format("[%s]刷新好友列表完成,共有好友%d个.", this.botName, this.friends.estimatedSize()));
     }
 
     public Collection<Group> flushGroups() {
@@ -194,16 +196,42 @@ public class Bot {
         if (!this.completableFuture.isDone()) {
             this.completableFuture.get();
         }
-        return this.friends.containsKey(userId);
+        return this.friends.getIfPresent(userId) != null;
     }
 
-    public Friend getFriend(long userId) {
+
+    public Stranger getStranger(long userId, boolean refresh) {
         try {
             if (!this.completableFuture.isDone()) {
                 this.completableFuture.get();
             }
-            Friend friend = this.friends.get(userId);
-            if (friend == null) {
+            Stranger stranger = this.stranger.getIfPresent(userId);
+            if (stranger == null || refresh) {
+                ApiResult apiResult = this.botClient.invokeApi(new GetStranger(userId), this);
+                JSONObject resultObject = this.getObject(apiResult.getData());
+                long userIdTemp = resultObject.getLongValue("user_id");
+                String nickname = resultObject.getString("nickname");
+                String sex = resultObject.getString("sex");
+                int age = resultObject.getInteger("age");
+                String qid = resultObject.getString("qid");
+                int level = resultObject.getInteger("level");
+                int loginDays = resultObject.getInteger("login_days");
+                this.stranger.put(userIdTemp, new Stranger(userIdTemp, nickname, sex, age, qid, level, loginDays, this));
+                stranger = this.stranger.getIfPresent(userId);
+            }
+            return stranger;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public Friend getFriend(long userId, boolean refresh) {
+        try {
+            if (!this.completableFuture.isDone()) {
+                this.completableFuture.get();
+            }
+            Friend friend = this.friends.getIfPresent(userId);
+            if (friend == null || refresh) {
                 ApiResult apiResult = this.botClient.invokeApi(new GetFriends(), this);
                 JSONArray resultArray = this.getArray(apiResult.getData());
                 for (int i = 0; i < resultArray.size(); i++) {
@@ -213,7 +241,7 @@ public class Bot {
                     String remark = resultObject.getString("remark");
                     this.friends.put(userIdTemp, new Friend(userIdTemp, nickname, remark, this));
                 }
-                friend = this.friends.get(userId);
+                friend = this.friends.getIfPresent(userId);
             }
             return friend;
         } catch (Exception e) {
@@ -226,7 +254,7 @@ public class Bot {
             if (!this.completableFuture.isDone()) {
                 this.completableFuture.get();
             }
-            return this.friends.values();
+            return this.friends.asMap().values();
         } catch (Exception e) {
             return null;
         }
@@ -299,7 +327,7 @@ public class Bot {
         }
     }
 
-    public Collection<Member> getMembers(long groupId) {
+    public Map<Long, Member> getMembers(long groupId) {
         try {
             if (!this.completableFuture.isDone()) {
                 this.completableFuture.get();
@@ -309,7 +337,7 @@ public class Bot {
                 this.flushGroupMembers(this.getGroup(groupId));
                 groupMembers = this.groupMembers.get(groupId);
             }
-            return groupMembers.values();
+            return new HashMap<>(groupMembers);
         } catch (Exception e) {
             return null;
         }
@@ -344,6 +372,10 @@ public class Bot {
 
     public void memberPardon(long groupId, long userId) {
         this.botClient.invokeApi(new Ban(groupId, userId, 0), this);
+    }
+
+    public void memberKick(long groupId, long userId, boolean rejectAddRequest) {
+        this.botClient.invokeApi(new GroupKick(groupId, userId, rejectAddRequest), this);
     }
 
     public int sendPrivateMessage(long userId, MessageChain messageChain) {

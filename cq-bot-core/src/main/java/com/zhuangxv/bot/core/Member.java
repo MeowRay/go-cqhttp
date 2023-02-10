@@ -67,6 +67,10 @@ public class Member implements Contact {
         this.bot.memberPardon(this.groupId, this.userId);
     }
 
+    public void kick(boolean rejectAddRequest) {
+        this.bot.memberKick(this.groupId, this.userId, rejectAddRequest);
+    }
+
     @Override
     public int sendMessage(MessageChain messageChain) {
         try {

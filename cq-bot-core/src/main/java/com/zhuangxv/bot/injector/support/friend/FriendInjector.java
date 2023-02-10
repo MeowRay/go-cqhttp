@@ -26,7 +26,7 @@ public class FriendInjector implements ObjectInjector<Friend> {
     public Friend getObject(BaseEvent event, Bot bot) {
         if (event instanceof PrivateMessageEvent) {
             PrivateMessageEvent privateMessageEvent = (PrivateMessageEvent) event;
-            return bot.getFriend(privateMessageEvent.getUserId());
+            return bot.getFriend(privateMessageEvent.getUserId() , false);
         }
         return null;
     }

@@ -63,12 +63,15 @@ public class BotFactory implements ApplicationContextAware, DisposableBean {
         for (Object bean : beans.values()) {
             Class<?> beanClass = ClassUtils.getUserClass(bean);
             Set<Method> methodSet = Arrays.stream(beanClass.getMethods()).filter(method ->
-                    method.isAnnotationPresent(GroupMessageHandler.class)
-                            || method.isAnnotationPresent(TempMessageHandler.class)
-                            || method.isAnnotationPresent(FriendMessageHandler.class)
-                            || method.isAnnotationPresent(GroupRecallHandler.class)
-                            || method.isAnnotationPresent(MemberAddHandler.class)
-            ).collect(Collectors.toSet());
+                    method.isAnnotationPresent(EventHandler.class)
+            ).sorted(new Comparator<Method>() {
+                @Override
+                public int compare(Method o1, Method o2) {
+                    return o1.getAnnotation(EventHandler.class).priority().getSlot() - o2.getAnnotation(EventHandler.class).priority().getSlot();
+                }
+            }).collect(Collectors.toSet());
+
+
             methodSet.forEach(method -> {
                 HandlerMethod handlerMethod = new HandlerMethod() {
                     {
@@ -151,8 +154,17 @@ public class BotFactory implements ApplicationContextAware, DisposableBean {
         for (HandlerMethod handlerMethod : handlerMethodSet) {
             Class<?>[] parameterTypes = handlerMethod.getMethod().getParameterTypes();
             Object[] objects = new Object[parameterTypes.length];
+
             for (int i = 0; i < parameterTypes.length; i++) {
                 Class<?> parameterType = parameterTypes[i];
+                if (BaseEvent.class.isAssignableFrom(parameterType)) {
+                    objects[i] = event;
+                    continue;
+                }
+                if (Bot.class.isAssignableFrom(parameterType)) {
+                    objects[i] = bot;
+                    continue;
+                }
                 ObjectInjector<?> objectInjector = objectInjectorMap.get(objectInjectorType) != null ? objectInjectorMap.get(objectInjectorType).get(parameterType) : null;
                 if (objectInjector == null) {
                     objectInjector = objectInjectorMap.get("all") != null ? objectInjectorMap.get("all").get(parameterType) : null;

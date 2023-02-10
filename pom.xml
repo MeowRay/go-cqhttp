@@ -4,12 +4,17 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.zhuangxv</groupId>
-    <artifactId>bot</artifactId>
+    <groupId>net.wdsj.backend</groupId>
+    <artifactId>cq-bot</artifactId>
     <packaging>pom</packaging>
     <version>1.0.0</version>
+
+<!--    <groupId>com.zhuangxv</groupId>
+    <artifactId>bot</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0.0</version>-->
     <modules>
-        <module>bot-core</module>
+        <module>cq-bot-core</module>
     </modules>
 
     <properties>
@@ -23,17 +28,30 @@
         <lombok.version>1.18.12</lombok.version>
         <slf4j.version>1.7.30</slf4j.version>
         <netty.version>4.1.51.Final</netty.version>
+        <kotlin.version>1.6.20</kotlin.version>
     </properties>
+
+
+    <distributionManagement>
+        <repository>
+            <id>nexus-releases</id>
+            <name>Release Repository</name>
+            <url>${ReleaseRepository}</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus-snapshots</id>
+            <name>Snapshot Repository</name>
+            <url>${SnapshotRepository}</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <dependencyManagement>
         <dependencies>
-
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
                 <version>${netty.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>com.alibaba</groupId>
                 <artifactId>fastjson</artifactId>
@@ -74,5 +92,49 @@
 
         </dependencies>
     </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <version>${kotlin.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test</artifactId>
+            <version>${kotlin.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <version>${kotlin.version}</version>
+                <executions>
+                    <execution>
+                        <id>compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>test-compile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <jvmTarget>1.8</jvmTarget>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

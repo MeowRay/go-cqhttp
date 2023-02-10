@@ -1,5 +1,6 @@
 package com.zhuangxv.bot.annotation;
 
+import com.zhuangxv.bot.event.EventPriority;
 import com.zhuangxv.bot.utilEnum.IgnoreItselfEnum;
 
 import java.lang.annotation.*;
@@ -12,6 +13,8 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface GroupMessageHandler {
+
+    EventPriority priority() default EventPriority.NORMAL;
 
     /**
      * 限制bot 参数为bot qq  0为不限制
@@ -47,6 +50,7 @@ public @interface GroupMessageHandler {
      * 是否被@
      */
     boolean isAt() default false;
+
 
     /**
      * 忽略自身
